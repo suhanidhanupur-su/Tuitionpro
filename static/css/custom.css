@@ -1,0 +1,144 @@
+/* =============================================
+   TuitionPro - Custom Stylesheet
+   Extends Bootstrap 5 with app-specific styles
+   ============================================= */
+
+/* ---- CSS Variables ---- */
+:root {
+  --sidebar-width: 250px;
+  --navbar-height: 60px;
+  --primary-color: #4f46e5;   /* Indigo */
+  --sidebar-bg: #1e1b4b;      /* Dark indigo */
+  --sidebar-text: #c7d2fe;
+  --sidebar-hover: #312e81;
+  --sidebar-active: #6366f1;
+}
+
+/* ---- Body & Layout ---- */
+body {
+  background-color: #f8f9fa;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ---- Navbar ---- */
+.navbar {
+  height: var(--navbar-height);
+  background-color: var(--primary-color) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  z-index: 1030;
+}
+
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: 0.5px;
+  color: #fff !important;
+}
+
+/* ---- Sidebar ---- */
+#sidebar {
+  width: var(--sidebar-width);
+  min-height: calc(100vh - var(--navbar-height));
+  background-color: var(--sidebar-bg);
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  z-index: 1020;
+}
+
+#sidebar .nav-link {
+  color: var(--sidebar-text);
+  padding: 12px 20px;
+  border-radius: 6px;
+  margin: 2px 8px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.2s;
+}
+
+#sidebar .nav-link:hover {
+  background-color: var(--sidebar-hover);
+  color: #fff;
+}
+
+#sidebar .nav-link.active {
+  background-color: var(--sidebar-active);
+  color: #fff;
+  font-weight: 600;
+}
+
+#sidebar .sidebar-heading {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #818cf8;
+  padding: 16px 20px 6px;
+}
+
+/* ---- Main Content ---- */
+#main-content {
+  margin-left: var(--sidebar-width);
+  margin-top: var(--navbar-height);
+  padding: 28px;
+  min-height: calc(100vh - var(--navbar-height));
+}
+
+/* ---- Cards ---- */
+.card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.card-header {
+  background-color: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+}
+
+/* ---- Stat Cards ---- */
+.stat-card {
+  border-left: 4px solid var(--primary-color);
+}
+
+.stat-card .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+/* ---- Buttons ---- */
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #4338ca;
+  border-color: #4338ca;
+}
+
+/* ---- Responsive: collapse sidebar on mobile ---- */
+@media (max-width: 768px) {
+  #sidebar {
+    width: 0;
+    overflow: hidden;
+  }
+
+  #sidebar.show {
+    width: var(--sidebar-width);
+  }
+
+  #main-content {
+    margin-left: 0;
+  }
+}
