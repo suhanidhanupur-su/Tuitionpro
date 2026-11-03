@@ -1,6 +1,7 @@
-from datetime import date as today_date, datetime
+import json
+from datetime import date as today_date, datetime, timedelta
 from decimal import Decimal
-from calendar import monthrange
+from calendar import monthrange, month_abbr
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -20,25 +21,88 @@ from .receipt import generate_receipt_pdf
 
 @login_required
 def dashboard(request):
+    today = today_date.today()
     active_students = Student.objects.filter(is_active=True).select_related('batch')
     total_students  = active_students.count()
     total_batches   = Batch.objects.filter(is_active=True).count()
 
-    # Calculate real-time fees collection and pending
+    # Total all-time collections
     total_collected = Payment.objects.aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
-    total_due = sum(
+
+    # This month collection
+    this_month_collection = Payment.objects.filter(
+        date__year=today.year,
+        date__month=today.month
+    ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+
+    # Total pending fees across active students
+    pending_fees = sum(
         (s.pending_balance for s in active_students if s.pending_balance > 0),
         Decimal('0.00')
     )
 
+    # Today's attendance percentage
+    today_records = Attendance.objects.filter(date=today)
+    today_total = today_records.count()
+    today_present = today_records.filter(status=Attendance.STATUS_PRESENT).count()
+    today_att_rate = round((today_present / today_total) * 100) if today_total else None
+
+    # ── Chart 1: Monthly Collection (Past 6 Months) ──────────────────
+    collection_labels = []
+    collection_values = []
+    for i in range(5, -1, -1):
+        year = today.year
+        month = today.month - i
+        while month <= 0:
+            month += 12
+            year -= 1
+        label = f"{month_abbr[month]} '{str(year)[2:]}"
+        month_sum = Payment.objects.filter(
+            date__year=year,
+            date__month=month
+        ).aggregate(Sum('amount'))['amount__sum'] or Decimal('0.00')
+
+        collection_labels.append(label)
+        collection_values.append(float(month_sum))
+
+    # ── Chart 2: Daily Attendance Trend (Past 7 Days) ────────────────
+    att_labels = []
+    att_present_counts = []
+    att_absent_counts = []
+    att_rates = []
+
+    for i in range(6, -1, -1):
+        day_date = today - timedelta(days=i)
+        day_records = Attendance.objects.filter(date=day_date)
+        d_total = day_records.count()
+        d_present = day_records.filter(status=Attendance.STATUS_PRESENT).count()
+        d_absent = d_total - d_present
+        d_rate = round((d_present / d_total) * 100, 1) if d_total else 0
+
+        att_labels.append(day_date.strftime('%a, %d %b'))
+        att_present_counts.append(d_present)
+        att_absent_counts.append(d_absent)
+        att_rates.append(d_rate)
+
     context = {
-        'page_title':      'Dashboard',
-        'total_students':  total_students,
-        'total_batches':   total_batches,
-        'total_collected': total_collected,
-        'total_due':       total_due,
-        'recent_students': Student.objects.select_related('batch').order_by('-created_at')[:5],
-        'recent_payments': Payment.objects.select_related('student', 'student__batch').order_by('-created_at')[:5],
+        'page_title':              'Dashboard',
+        'total_students':          total_students,
+        'total_batches':           total_batches,
+        'this_month_collection':   this_month_collection,
+        'total_collected':         total_collected,
+        'pending_fees':            pending_fees,
+        'today_att_rate':          today_att_rate,
+        'recent_students':         Student.objects.select_related('batch').order_by('-created_at')[:5],
+        'recent_payments':         Payment.objects.select_related('student', 'student__batch').order_by('-created_at')[:5],
+        # JSON serialized for Chart.js
+        'chart_col_labels':        json.dumps(collection_labels),
+        'chart_col_values':        json.dumps(collection_values),
+        'chart_att_labels':        json.dumps(att_labels),
+        'chart_att_present':       json.dumps(att_present_counts),
+        'chart_att_absent':        json.dumps(att_absent_counts),
+        'chart_att_rates':         json.dumps(att_rates),
+        'has_attendance_data':     sum(att_present_counts) + sum(att_absent_counts) > 0,
+        'has_collection_data':     sum(collection_values) > 0,
     }
     return render(request, 'core/dashboard.html', context)
 
