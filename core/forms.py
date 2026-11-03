@@ -1,5 +1,5 @@
 from django import forms
-from .models import Batch, Student
+from .models import Batch, Student, Payment
 
 
 # ── Shared widget helpers ────────────────────────────────────────────────────
@@ -35,13 +35,13 @@ class BatchForm(forms.ModelForm):
         widgets = {
             'name':        _text('e.g. Class 10 Maths'),
             'subject':     _text('e.g. Mathematics'),
-            'schedule':    _text('e.g. Mon/Wed/Fri  6:00–7:30 PM'),
+            'schedule':    _text('e.g. Mon/Wed/Fri  6:00 - 7:30 PM'),
             'monthly_fee': _number('e.g. 1500'),
             'start_date':  _date(),
             'is_active':   _checkbox(),
         }
         labels = {
-            'monthly_fee': 'Monthly Fee (₹)',
+            'monthly_fee': 'Monthly Fee (Rs.)',
             'is_active':   'Currently active?',
         }
 
@@ -69,3 +69,29 @@ class StudentForm(forms.ModelForm):
         # Only show active batches in the dropdown
         self.fields['batch'].queryset = Batch.objects.filter(is_active=True)
         self.fields['batch'].empty_label = '— No batch assigned —'
+
+
+# ── Payment Form ─────────────────────────────────────────────────────────────
+
+class PaymentForm(forms.ModelForm):
+    class Meta:
+        model = Payment
+        fields = ['student', 'amount', 'date', 'mode', 'reference', 'remarks']
+        widgets = {
+            'student':   _select(),
+            'amount':    _number('Enter amount, e.g. 1500'),
+            'date':      _date(),
+            'mode':      _select(),
+            'reference': _text('e.g. UPI Ref / UTR / Cheque No.'),
+            'remarks':   _text('e.g. November fee installment'),
+        }
+        labels = {
+            'amount':    'Amount (Rs.)',
+            'reference': 'Reference / Transaction ID (Optional)',
+            'remarks':   'Remarks / Note (Optional)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['student'].queryset = Student.objects.filter(is_active=True).order_by('name')
+        self.fields['student'].empty_label = '— Select Student —'

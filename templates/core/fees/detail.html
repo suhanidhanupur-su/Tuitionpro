@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Receipt {{ payment.receipt_no }} — TuitionPro{% endblock %}
+
+{% block extra_css %}
+<style>
+  .receipt-card {
+    max-width: 780px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  .receipt-header {
+    background: linear-gradient(135deg, #1e1b4b 0%, #4f46e5 100%);
+    color: #fff;
+    padding: 28px 36px;
+  }
+  @media print {
+    #sidebar, .navbar, .btn, .no-print, .alert { display: none !important; }
+    #main-content { margin: 0 !important; padding: 0 !important; }
+    .receipt-card { box-shadow: none !important; border: 1px solid #ddd !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Actions Toolbar -->
+<div class="d-flex justify-content-between align-items-center mb-4 no-print">
+  <div>
+    <h4 class="mb-0 fw-bold">
+      <i class="bi bi-receipt-cutoff me-2 text-primary"></i>Fee Receipt
+    </h4>
+    <small class="text-muted">Receipt No: <strong>{{ payment.receipt_no }}</strong></small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'core:payment_receipt_pdf' payment.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF Receipt
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-printer me-1"></i> Print
+    </button>
+    <a href="{% url 'core:fee_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i> Back to Fees
+    </a>
+  </div>
+</div>
+
+<!-- Receipt Presentation Card -->
+<div class="receipt-card">
+  <!-- Top Branding Header -->
+  <div class="receipt-header d-flex justify-content-between align-items-center">
+    <div>
+      <h3 class="fw-bold mb-1 tracking-wide">TUITIONPRO ACADEMY</h3>
+      <div class="small opacity-75">Premier Coaching & Tuition Management</div>
+      <div class="small opacity-75">Phone: +91 98765 43210 &bull; support@tuitionpro.local</div>
+    </div>
+    <div class="text-end">
+      <span class="badge bg-light text-primary fs-6 px-3 py-2 fw-bold text-uppercase">
+        Fee Receipt
+      </span>
+      <div class="small mt-2 opacity-75">{{ payment.date|date:"d M Y" }}</div>
+    </div>
+  </div>
+
+  <div class="p-4 p-md-5">
+    <!-- Meta Bar -->
+    <div class="row bg-light rounded p-3 mb-4 g-2">
+      <div class="col-sm-6">
+        <span class="text-muted small">Receipt Number:</span>
+        <div class="fw-bold fs-6">{{ payment.receipt_no }}</div>
+      </div>
+      <div class="col-sm-6 text-sm-end">
+        <span class="text-muted small">Date Received:</span>
+        <div class="fw-bold fs-6">{{ payment.date|date:"d F Y" }}</div>
+      </div>
+    </div>
+
+    <!-- Student Info -->
+    <div class="card mb-4 border border-light-subtle">
+      <div class="card-header bg-light py-2 px-3 fw-bold small text-muted text-uppercase">
+        Student Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <small class="text-muted d-block">Student Name</small>
+            <span class="fw-bold fs-5">{{ payment.student.name }}</span>
+          </div>
+          <div class="col-sm-6">
+            <small class="text-muted d-block">Phone Number</small>
+            <span class="fw-semibold">{{ payment.student.phone|default:"—" }}</span>
+          </div>
+          <div class="col-sm-6">
+            <small class="text-muted d-block">Batch & Subject</small>
+            <span class="fw-semibold">
+              {{ payment.student.batch.name|default:"No Batch" }}
+              {% if payment.student.batch %}
+                — {{ payment.student.batch.subject }}
+              {% endif %}
+            </span>
+          </div>
+          <div class="col-sm-6">
+            <small class="text-muted d-block">Monthly Fee</small>
+            <span class="fw-semibold">
+              ₹{{ payment.student.batch.monthly_fee|default:0|floatformat:2 }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Particulars -->
+    <div class="table-responsive mb-4">
+      <table class="table table-bordered mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>Description</th>
+            <th>Mode</th>
+            <th>Reference / Txn ID</th>
+            <th class="text-end">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="fw-semibold">
+              {{ payment.remarks|default:"Tuition & Coaching Fee" }}
+            </td>
+            <td>
+              <span class="badge bg-secondary-subtle text-secondary">
+                {{ payment.get_mode_display }}
+              </span>
+            </td>
+            <td class="text-muted">{{ payment.reference|default:"—" }}</td>
+            <td class="text-end fw-bold fs-5 text-primary">₹{{ payment.amount|floatformat:2 }}</td>
+          </tr>
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <th colspan="3" class="text-end fs-6">Total Amount Received:</th>
+            <th class="text-end text-success fs-4">₹{{ payment.amount|floatformat:2 }}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Student Ledger Summary -->
+    <div class="bg-light p-3 rounded mb-4">
+      <div class="row text-center g-2">
+        <div class="col-4">
+          <div class="text-muted small">Total Fee Expected</div>
+          <div class="fw-bold fs-6">₹{{ payment.student.total_fee_expected|floatformat:2 }}</div>
+        </div>
+        <div class="col-4 border-start border-end">
+          <div class="text-muted small">Total Paid to Date</div>
+          <div class="fw-bold fs-6 text-success">₹{{ payment.student.total_paid|floatformat:2 }}</div>
+        </div>
+        <div class="col-4">
+          <div class="text-muted small">Current Balance</div>
+          <div class="fw-bold fs-6
+            {% if payment.student.pending_balance > 0 %}text-danger
+            {% elif payment.student.pending_balance < 0 %}text-primary
+            {% else %}text-success{% endif %}">
+            {% if payment.student.pending_balance > 0 %}
+              ₹{{ payment.student.pending_balance|floatformat:2 }} Due
+            {% elif payment.student.pending_balance < 0 %}
+              ₹{{ payment.student.pending_balance|floatformat:2|slice:"1:" }} Advance
+            {% else %}
+              Cleared
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signatures -->
+    <div class="row pt-4 mt-4 border-top align-items-end">
+      <div class="col-7">
+        <small class="text-muted d-block">&bull; Fees once paid are non-refundable.</small>
+        <small class="text-muted d-block">&bull; This is an authentic computer-generated receipt.</small>
+      </div>
+      <div class="col-5 text-center">
+        <div class="border-top border-dark pt-1 fw-bold small">
+          Authorized Signatory
+        </div>
+        <small class="text-muted">TuitionPro Academy</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-light p-3 text-center border-top no-print d-flex justify-content-center gap-3">
+    <a href="{% url 'core:payment_receipt_pdf' payment.pk %}" class="btn btn-primary">
+      <i class="bi bi-download me-1"></i> Download PDF Receipt
+    </a>
+    <a href="{% url 'core:payment_create' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-plus-lg me-1"></i> Record Another Payment
+    </a>
+  </div>
+</div>
+
+{% endblock %}

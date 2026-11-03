@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} — TuitionPro{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">
+      <i class="bi bi-cash-coin me-2 text-primary"></i>{{ page_title }}
+    </h4>
+    <small class="text-muted">Enter payment details to record transaction and issue a receipt</small>
+  </div>
+  <a href="{% url 'core:fee_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to Fees
+  </a>
+</div>
+
+<div class="row g-4">
+  <!-- Left column: Form -->
+  <div class="col-lg-7">
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <!-- Student selection -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Student <span class="text-danger">*</span></label>
+            {{ form.student }}
+            {% if form.student.errors %}
+              <div class="text-danger small mt-1">{{ form.student.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Amount & Date -->
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Amount (₹) <span class="text-danger">*</span></label>
+              {{ form.amount }}
+              {% if form.amount.errors %}
+                <div class="text-danger small mt-1">{{ form.amount.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Payment Date <span class="text-danger">*</span></label>
+              {{ form.date }}
+              {% if form.date.errors %}
+                <div class="text-danger small mt-1">{{ form.date.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Mode & Reference -->
+          <div class="row g-3 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Payment Mode <span class="text-danger">*</span></label>
+              {{ form.mode }}
+              {% if form.mode.errors %}
+                <div class="text-danger small mt-1">{{ form.mode.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold">Reference / Txn ID</label>
+              {{ form.reference }}
+              {% if form.reference.errors %}
+                <div class="text-danger small mt-1">{{ form.reference.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Remarks -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Remarks / Note</label>
+            {{ form.remarks }}
+            {% if form.remarks.errors %}
+              <div class="text-danger small mt-1">{{ form.remarks.errors.0 }}</div>
+            {% endif %}
+            <div class="form-text">e.g. Month name, installment, or reason for fee</div>
+          </div>
+
+          <!-- Action buttons -->
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check2-circle me-1"></i> Save & Generate Receipt
+            </button>
+            <a href="{% url 'core:fee_dashboard' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right column: Student Balance Summary (if selected_student) -->
+  <div class="col-lg-5">
+    {% if selected_student %}
+    <div class="card shadow-sm border-0 border-top border-4 border-primary">
+      <div class="card-body p-4">
+        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+          <i class="bi bi-person-badge text-primary"></i>
+          Student Overview
+        </h5>
+
+        <div class="mb-3 pb-3 border-bottom">
+          <div class="fw-bold fs-5">{{ selected_student.name }}</div>
+          <div class="text-muted small">
+            Batch: <strong>{{ selected_student.batch.name|default:"No Batch" }}</strong>
+            {% if selected_student.batch %}
+              ({{ selected_student.batch.subject }})
+            {% endif %}
+          </div>
+          <div class="text-muted small">Phone: {{ selected_student.phone }}</div>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="text-muted small">Monthly Fee</div>
+              <div class="fw-bold">₹{{ selected_student.batch.monthly_fee|default:0|floatformat:2 }}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="text-muted small">Months Active</div>
+              <div class="fw-bold">{{ selected_student.months_enrolled }} mo</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="text-muted small">Total Expected</div>
+              <div class="fw-bold">₹{{ selected_student.total_fee_expected|floatformat:2 }}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="p-2 bg-light rounded text-center">
+              <div class="text-muted small">Total Paid</div>
+              <div class="fw-bold text-success">₹{{ selected_student.total_paid|floatformat:2 }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded text-center
+          {% if selected_student.pending_balance > 0 %}bg-danger-subtle text-danger
+          {% elif selected_student.pending_balance < 0 %}bg-primary-subtle text-primary
+          {% else %}bg-success-subtle text-success{% endif %}">
+          <div class="small fw-semibold text-uppercase">Current Balance</div>
+          <div class="fs-4 fw-bold">
+            {% if selected_student.pending_balance > 0 %}
+              ₹{{ selected_student.pending_balance|floatformat:2 }} Due
+            {% elif selected_student.pending_balance < 0 %}
+              ₹{{ selected_student.pending_balance|floatformat:2|slice:"1:" }} Advance
+            {% else %}
+              Fully Cleared
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="mt-3 text-center">
+          <a href="{% url 'core:student_ledger' selected_student.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-clock-history me-1"></i> View Full Payment History
+          </a>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="card shadow-sm border-0 bg-light">
+      <div class="card-body p-4 text-center text-muted">
+        <i class="bi bi-info-circle fs-1 text-primary mb-2 d-block"></i>
+        <h6 class="fw-bold text-dark">Tip</h6>
+        <p class="small mb-0">
+          Selecting a student from the dropdown will record the payment and update their pending balance in real-time. A downloadable PDF receipt will be issued immediately upon saving.
+        </p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

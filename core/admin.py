@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Batch, Student
+from .models import Batch, Student, Attendance, Payment
 
 
 @admin.register(Batch)
@@ -16,3 +16,19 @@ class StudentAdmin(admin.ModelAdmin):
     list_filter   = ['is_active', 'batch']
     search_fields = ['name', 'phone', 'email']
     ordering      = ['name']
+
+
+@admin.register(Attendance)
+class AttendanceAdmin(admin.ModelAdmin):
+    list_display  = ['student', 'batch', 'date', 'status', 'marked_at']
+    list_filter   = ['status', 'batch', 'date']
+    search_fields = ['student__name', 'batch__name']
+    ordering      = ['-date', 'student__name']
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display  = ['receipt_no', 'student', 'amount', 'date', 'mode', 'reference', 'created_at']
+    list_filter   = ['mode', 'date']
+    search_fields = ['receipt_no', 'student__name', 'reference']
+    ordering      = ['-date', '-created_at']

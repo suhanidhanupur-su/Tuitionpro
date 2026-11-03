@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}Fees & Payments — TuitionPro{% endblock %}
+
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">
+      <i class="bi bi-cash-stack me-2 text-primary"></i>Fees & Payments
+    </h4>
+    <small class="text-muted">Track pending dues, record student payments, and generate PDF receipts</small>
+  </div>
+  <a href="{% url 'core:payment_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> Record Payment
+  </a>
+</div>
+
+<!-- ── Top Metrics ── -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-4">
+    <div class="card p-3 shadow-sm border-0 border-start border-4 border-primary">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Total Fee Expected</div>
+          <div class="fs-3 fw-bold text-dark mt-1">₹{{ tot_expected|floatformat:2 }}</div>
+          <small class="text-muted">Based on active students & batches</small>
+        </div>
+        <div class="fs-1 text-primary opacity-25">
+          <i class="bi bi-journal-text"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-4">
+    <div class="card p-3 shadow-sm border-0 border-start border-4 border-success">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Total Collected</div>
+          <div class="fs-3 fw-bold text-success mt-1">₹{{ tot_collected|floatformat:2 }}</div>
+          <small class="text-muted">Total payments received</small>
+        </div>
+        <div class="fs-1 text-success opacity-25">
+          <i class="bi bi-check-circle-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-xl-4">
+    <div class="card p-3 shadow-sm border-0 border-start border-4 border-danger">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Total Pending Due</div>
+          <div class="fs-3 fw-bold text-danger mt-1">₹{{ tot_pending|floatformat:2 }}</div>
+          <small class="text-muted">Outstanding student balance</small>
+        </div>
+        <div class="fs-1 text-danger opacity-25">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Filter & Search Bar ── -->
+<div class="card mb-4 shadow-sm border-0">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-center">
+      <!-- Search input -->
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input
+            type="text"
+            name="q"
+            value="{{ q }}"
+            class="form-control border-start-0 ps-0"
+            placeholder="Search by student name or phone…"
+          />
+        </div>
+      </div>
+
+      <!-- Batch Filter -->
+      <div class="col-md-3">
+        <select name="batch" class="form-select">
+          <option value="">— All Batches —</option>
+          {% for b in batches %}
+            <option value="{{ b.pk }}" {% if selected_batch == b.pk|stringformat:"s" %}selected{% endif %}>
+              {{ b.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="col-md-2">
+        <select name="status" class="form-select">
+          <option value="">— All Status —</option>
+          <option value="due" {% if selected_status == "due" %}selected{% endif %}>Has Due (Pending)</option>
+          <option value="cleared" {% if selected_status == "cleared" %}selected{% endif %}>Fully Cleared</option>
+          <option value="advance" {% if selected_status == "advance" %}selected{% endif %}>Advance Paid</option>
+        </select>
+      </div>
+
+      <!-- Filter button -->
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">
+          <i class="bi bi-funnel me-1"></i> Filter
+        </button>
+        {% if q or selected_batch or selected_status %}
+          <a href="{% url 'core:fee_dashboard' %}" class="btn btn-outline-secondary" title="Clear Filters">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Student Fee Balances Table ── -->
+<div class="card mb-4 shadow-sm border-0">
+  <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+    <span class="fw-bold">
+      <i class="bi bi-person-lines-fill me-2 text-primary"></i>Student Balance Ledger
+      <span class="badge bg-secondary-subtle text-secondary ms-2">{{ students|length }}</span>
+    </span>
+  </div>
+  <div class="card-body p-0">
+    {% if students %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="px-4">Student</th>
+            <th>Batch</th>
+            <th>Monthly Fee</th>
+            <th>Months Active</th>
+            <th>Total Expected</th>
+            <th>Total Paid</th>
+            <th>Pending Balance</th>
+            <th class="text-end pe-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+          <tr>
+            <td class="px-4">
+              <a href="{% url 'core:student_ledger' student.pk %}" class="text-decoration-none fw-bold text-dark">
+                {{ student.name }}
+              </a>
+              <div class="text-muted small">{{ student.phone }}</div>
+            </td>
+            <td>
+              {% if student.batch %}
+                <span class="badge" style="background:#ede9fe; color:#4f46e5;">
+                  {{ student.batch.name }}
+                </span>
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if student.batch and student.batch.monthly_fee %}
+                ₹{{ student.batch.monthly_fee|floatformat:2 }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">
+                {{ student.months_enrolled }} mo{{ student.months_enrolled|pluralize }}
+              </span>
+            </td>
+            <td class="fw-semibold">₹{{ student.total_fee_expected|floatformat:2 }}</td>
+            <td class="text-success fw-semibold">₹{{ student.total_paid|floatformat:2 }}</td>
+            <td>
+              {% if student.pending_balance > 0 %}
+                <span class="badge bg-danger-subtle text-danger fs-6 px-2 py-1">
+                  <i class="bi bi-clock-history me-1"></i>₹{{ student.pending_balance|floatformat:2 }} Due
+                </span>
+              {% elif student.pending_balance < 0 %}
+                <span class="badge bg-primary-subtle text-primary fs-6 px-2 py-1">
+                  ₹{{ student.pending_balance|floatformat:2|slice:"1:" }} Advance
+                </span>
+              {% else %}
+                <span class="badge bg-success-subtle text-success fs-6 px-2 py-1">
+                  <i class="bi bi-check2-circle me-1"></i>Cleared
+                </span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <div class="btn-group btn-group-sm">
+                <a href="{% url 'core:payment_create' %}?student={{ student.pk }}"
+                   class="btn btn-outline-success" title="Record Payment">
+                  <i class="bi bi-cash me-1"></i> Pay
+                </a>
+                <a href="{% url 'core:student_ledger' student.pk %}"
+                   class="btn btn-outline-secondary" title="View Ledger">
+                  <i class="bi bi-receipt"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-search fs-1 d-block mb-2"></i>
+      No students match the current filters.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Recent Transactions Table ── -->
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
+    <span class="fw-bold">
+      <i class="bi bi-receipt-cutoff me-2 text-primary"></i>Recent Payment Transactions
+    </span>
+  </div>
+  <div class="card-body p-0">
+    {% if recent_payments %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="px-4">Receipt No</th>
+            <th>Date</th>
+            <th>Student</th>
+            <th>Mode</th>
+            <th>Amount</th>
+            <th>Remarks</th>
+            <th class="text-end pe-4">Receipt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in recent_payments %}
+          <tr>
+            <td class="px-4">
+              <a href="{% url 'core:payment_detail' p.pk %}" class="fw-bold text-decoration-none">
+                {{ p.receipt_no }}
+              </a>
+            </td>
+            <td class="text-muted small">{{ p.date|date:"d M Y" }}</td>
+            <td>
+              <div class="fw-semibold">{{ p.student.name }}</div>
+              <small class="text-muted">{{ p.student.batch.name|default:"—" }}</small>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">
+                {{ p.get_mode_display }}
+              </span>
+            </td>
+            <td class="fw-bold text-success">₹{{ p.amount|floatformat:2 }}</td>
+            <td class="text-muted small">{{ p.remarks|default:"—" }}</td>
+            <td class="text-end pe-4">
+              <a href="{% url 'core:payment_receipt_pdf' p.pk %}" class="btn btn-sm btn-outline-primary" title="Download PDF">
+                <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">
+      No payment transactions recorded yet.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

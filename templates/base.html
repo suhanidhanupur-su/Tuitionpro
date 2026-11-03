@@ -111,6 +111,18 @@
           </a>
         </li>
         <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'attendance_mark' %}active{% endif %}"
+             href="{% url 'core:attendance_mark' %}">
+            <i class="bi bi-calendar-check"></i> Attendance
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if request.resolver_match.url_name == 'attendance_report' %}active{% endif %}"
+             href="{% url 'core:attendance_report' %}">
+            <i class="bi bi-bar-chart-line"></i> Att. Report
+          </a>
+        </li>
+        <li class="nav-item">
           <a class="nav-link" href="#">
             <i class="bi bi-person-badge"></i> Teachers
           </a>
@@ -126,13 +138,9 @@
       <p class="sidebar-heading">Finance</p>
       <ul class="nav flex-column">
         <li class="nav-item">
-          <a class="nav-link" href="#">
-            <i class="bi bi-cash-stack"></i> Fees
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#">
-            <i class="bi bi-receipt"></i> Invoices
+          <a class="nav-link {% if 'fee' in request.resolver_match.url_name or 'payment' in request.resolver_match.url_name or 'ledger' in request.resolver_match.url_name %}active{% endif %}"
+             href="{% url 'core:fee_dashboard' %}">
+            <i class="bi bi-cash-stack"></i> Fees & Payments
           </a>
         </li>
       </ul>

@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% load core_tags %}
+{% block title %}Monthly Attendance Report — TuitionPro{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Compact calendar table */
+  .att-table { font-size: 0.8rem; }
+  .att-table th, .att-table td { text-align: center; padding: 6px 4px; white-space: nowrap; }
+  .att-table td.name-col { text-align: left; padding-left: 16px; font-weight: 600; white-space: nowrap; min-width: 150px; }
+  .att-table th.day-head { min-width: 32px; }
+
+  /* Badges for P / A / – */
+  .att-p {
+    display: inline-block; width: 26px; line-height: 26px;
+    border-radius: 50%; background: #dcfce7; color: #15803d;
+    font-weight: 700; font-size: 0.75rem;
+  }
+  .att-a {
+    display: inline-block; width: 26px; line-height: 26px;
+    border-radius: 50%; background: #fee2e2; color: #b91c1c;
+    font-weight: 700; font-size: 0.75rem;
+  }
+  .att-dash { color: #d1d5db; font-size: 0.9rem; }
+
+  /* Percentage bar */
+  .pct-bar { height: 6px; border-radius: 3px; background: #e5e7eb; }
+  .pct-fill { height: 100%; border-radius: 3px; }
+
+  /* Print styles */
+  @media print {
+    #sidebar, .navbar, .filter-card, .btn { display: none !important; }
+    #main-content { margin: 0 !important; padding: 0 !important; }
+    .card { box-shadow: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold">
+      <i class="bi bi-bar-chart-line me-2 text-primary"></i>Monthly Attendance Report
+    </h4>
+    <small class="text-muted">Student-wise attendance for a full month</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'core:attendance_mark' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil-square me-1"></i> Mark Today
+    </a>
+    {% if report_data %}
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-printer me-1"></i> Print
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── FILTER BAR ── -->
+<div class="card mb-4 filter-card">
+  <div class="card-body py-3">
+    <form method="get" class="row g-3 align-items-end">
+
+      <div class="col-md-4">
+        <label class="form-label fw-semibold mb-1">Batch</label>
+        <select name="batch" class="form-select" required>
+          <option value="">— Select batch —</option>
+          {% for b in batches %}
+            <option value="{{ b.pk }}" {% if batch_id == b.pk|stringformat:"s" %}selected{% endif %}>
+              {{ b.name }} — {{ b.subject }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label fw-semibold mb-1">Month</label>
+        <select name="month" class="form-select">
+          {% for num, name in month_choices %}
+            <option value="{{ num }}" {% if month == num %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label fw-semibold mb-1">Year</label>
+        <select name="year" class="form-select">
+          {% for y in year_choices %}
+            <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-funnel me-1"></i> Generate Report
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- ── SUMMARY CARDS ── -->
+{% if selected_batch and report_data %}
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="card p-3 text-center border-0 shadow-sm">
+      <div class="text-muted small mb-1">Batch</div>
+      <div class="fw-bold text-primary">{{ selected_batch.name }}</div>
+      <div class="text-muted small">{{ selected_batch.subject }}</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card p-3 text-center border-0 shadow-sm">
+      <div class="text-muted small mb-1">Period</div>
+      <div class="fw-bold">{{ month_name }}</div>
+      <div class="text-muted small">{{ days_in_month }} days in month</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card p-3 text-center border-0 shadow-sm">
+      <div class="text-muted small mb-1">Students</div>
+      <div class="fw-bold text-success">{{ report_data|length }}</div>
+      <div class="text-muted small">active in this batch</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CALENDAR GRID TABLE ── -->
+<div class="card mb-4">
+  <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
+    <span class="fw-semibold">Attendance Grid — {{ month_name }}</span>
+    <div class="d-flex gap-3 small text-muted align-items-center">
+      <span><span class="att-p">P</span> Present</span>
+      <span><span class="att-a">A</span> Absent</span>
+      <span class="att-dash">–</span> Not recorded
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered att-table mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="name-col">Student</th>
+            {% for day in days_in_month|get_range %}
+              <th class="day-head">{{ day }}</th>
+            {% endfor %}
+            <th class="text-center" style="min-width:60px">Present</th>
+            <th class="text-center" style="min-width:55px">Absent</th>
+            <th class="text-center" style="min-width:65px">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report_data %}
+          <tr>
+            <td class="name-col">{{ row.student.name }}</td>
+            {% for day in days_in_month|get_range %}
+              <td>
+                {% if day in row.day_map %}
+                  {% if row.day_map|get_item:day == 'P' %}
+                    <span class="att-p">P</span>
+                  {% else %}
+                    <span class="att-a">A</span>
+                  {% endif %}
+                {% else %}
+                  <span class="att-dash">–</span>
+                {% endif %}
+              </td>
+            {% endfor %}
+            <td>
+              <span class="fw-bold text-success">{{ row.present }}</span>
+            </td>
+            <td>
+              <span class="fw-bold text-danger">{{ row.absent }}</span>
+            </td>
+            <td>
+              <div class="d-flex flex-column align-items-center gap-1">
+                <span class="fw-bold
+                  {% if row.percent >= 75 %}text-success
+                  {% elif row.percent >= 50 %}text-warning
+                  {% else %}text-danger{% endif %}">
+                  {{ row.percent }}%
+                </span>
+                <div class="pct-bar w-100">
+                  <div class="pct-fill
+                    {% if row.percent >= 75 %}bg-success
+                    {% elif row.percent >= 50 %}bg-warning
+                    {% else %}bg-danger{% endif %}"
+                    style="width: {{ row.percent }}%">
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── STUDENT SUMMARY CARDS ── -->
+<h5 class="fw-bold mb-3">Student Summary</h5>
+<div class="row g-3 mb-4">
+  {% for row in report_data %}
+  <div class="col-sm-6 col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+          <div class="fw-semibold">{{ row.student.name }}</div>
+          <div class="text-muted small">{{ row.student.phone }}</div>
+        </div>
+        <span class="badge
+          {% if row.percent >= 75 %}bg-success
+          {% elif row.percent >= 50 %}bg-warning text-dark
+          {% else %}bg-danger{% endif %}
+          fs-6">
+          {{ row.percent }}%
+        </span>
+      </div>
+
+      <div class="d-flex justify-content-around text-center mt-1 mb-2">
+        <div>
+          <div class="fw-bold text-success fs-5">{{ row.present }}</div>
+          <div class="text-muted" style="font-size:0.75rem">Present</div>
+        </div>
+        <div class="border-start border-end px-3">
+          <div class="fw-bold text-danger fs-5">{{ row.absent }}</div>
+          <div class="text-muted" style="font-size:0.75rem">Absent</div>
+        </div>
+        <div>
+          <div class="fw-bold text-secondary fs-5">{{ row.total }}</div>
+          <div class="text-muted" style="font-size:0.75rem">Recorded</div>
+        </div>
+      </div>
+
+      <!-- Attendance bar -->
+      {% if row.total > 0 %}
+      <div class="pct-bar">
+        <div class="pct-fill
+          {% if row.percent >= 75 %}bg-success
+          {% elif row.percent >= 50 %}bg-warning
+          {% else %}bg-danger{% endif %}"
+          style="width: {{ row.percent }}%">
+        </div>
+      </div>
+      {% else %}
+      <div class="text-muted small text-center">No attendance recorded yet</div>
+      {% endif %}
+
+      {% if row.percent < 75 and row.total > 0 %}
+      <div class="mt-2 small text-danger">
+        <i class="bi bi-exclamation-triangle me-1"></i>Below 75% attendance
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% elif selected_batch %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle me-2"></i>
+    No attendance data found for <strong>{{ selected_batch.name }}</strong> in {{ month_name }}.
+    <a href="{% url 'core:attendance_mark' %}?batch={{ batch_id }}">Mark attendance first.</a>
+  </div>
+{% endif %}
+
+{% endblock %}
