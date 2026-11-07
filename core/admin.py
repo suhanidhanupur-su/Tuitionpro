@@ -1,7 +1,6 @@
 from django.contrib import admin
 from .models import Batch, Student, Attendance, Payment
 
-
 @admin.register(Batch)
 class BatchAdmin(admin.ModelAdmin):
     list_display  = ['name', 'subject', 'monthly_fee', 'start_date', 'student_count', 'is_active']
